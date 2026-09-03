@@ -1,0 +1,15 @@
+# Binarios compilados
+/bin/
+*.exe
+*.test
+*.out
+
+# Artefactos de cobertura
+coverage.txt
+coverage.html
+
+# Específico de editor/OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
