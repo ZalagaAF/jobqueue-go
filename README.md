@@ -1,38 +1,26 @@
-# Job Queue con Dead-Letter Queue
-
-Sistema de colas de tareas en background, con reintentos y Dead-Letter Queue (DLQ), expuesto como API REST. Proyecto de portafolio construido con TDD estricto (rojo-verde-refactor).
-
-## Objetivo
-
-Implementar desde cero, entendiendo cada decisión de diseño, un sistema de:
-- Cola de tareas en memoria (FIFO)
-- Reintentos con backoff exponencial
-- Dead-Letter Queue para tareas que agotaron reintentos
-- Worker pool concurrente
-- API REST para encolar/consultar/reintentar tareas
-- Extensibilidad vía interfaces de Go (patrón Strategy + Registry)
-
-## Stack
-
-- Go (sin frameworks externos para la lógica core)
-- TDD estricto: cada pieza de lógica arranca con un test que falla
-
-## Cómo correr los tests
-
-\`\`\`bash
-go test ./...
-go test -v ./...       # verbose
-go test -race ./...    # detección de race conditions
-\`\`\`
-
 ## Estado del proyecto
 
-🚧 En desarrollo — Semana 1: núcleo de la cola.
+✅ Semana 1 completa — núcleo de la cola (sin concurrencia).
+🚧 Semana 2 en progreso — worker pool + API REST.
 
 ## Decisiones de diseño
 
-_(se va completando a medida que el proyecto avanza)_
-
-## Roadmap
-
-Ver [roadmap-job-queue-dlq.md](./roadmap-job-queue-dlq.md).
+- **Job como interfaz de un solo método** (Strategy pattern, GoF): el motor
+  de la cola nunca conoce EmailJob ni ImageResizeJob, solo el contrato
+  `Execute(ctx) error`.
+- **Payload dentro del struct del Job, no como parámetro genérico**: evita
+  type assertions y mantiene type-safety (convención similar a
+  `http.Handler.ServeHTTP`).
+- **Status como string tipado, no iota**: prioriza legibilidad en logs/JSON
+  sobre unos bytes de eficiencia, dado que el proyecto se expone via API REST.
+- **Backoff exponencial con loop y techo (30s)**, en vez de fórmula cerrada
+  con `math.Pow`: evita overflow silencioso en `time.Duration` (int64) ante
+  inputs inesperados.
+- **IDs de Task via crypto/rand (8 bytes, hex)**: sin dependencias externas,
+  thread-safe de entrada (relevante para la concurrencia de Semana 2).
+- **DeadLetterQueue usa map[string]*Task, Queue usa []*Task**: la estructura
+  de datos se elige según el patrón de acceso predominante — DLQ necesita
+  búsqueda/remoción por ID (O(1)), Queue necesita orden FIFO estricto.
+- **ProcessTask no duerme el delay de backoff real**: separa "decidir qué
+  hacer" de "ejecutar la espera", para no acoplar la lógica de negocio a
+  time.Sleep antes de tener concurrencia real (Semana 2).
