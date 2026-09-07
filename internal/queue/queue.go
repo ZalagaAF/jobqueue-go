@@ -2,6 +2,7 @@
 package queue
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
@@ -31,8 +32,9 @@ var ErrEmptyQueue = errors.New("queue: no hay tareas pendientes")
 // y mu serializa el acceso a items para que dos goroutines nunca lean
 // o escriban el slice al mismo tiempo.
 type Queue struct {
-	mu    sync.Mutex
-	items []*Task
+	mu     sync.Mutex
+	items  []*Task
+	notify chan struct{}
 }
 
 // Task envuelve un Job con su metadata de ejecución: estado actual,
@@ -46,9 +48,13 @@ type Task struct {
 	LastError error
 }
 
+
 // NewQueue crea una cola vacía lista para usar.
 func NewQueue() *Queue {
-	return &Queue{items: make([]*Task, 0)}
+	return &Queue{
+		items:  make([]*Task, 0),
+		notify: make(chan struct{}, 1),
+	}
 }
 
 // NewTask crea una Task en estado inicial (Pending, sin intentos)
@@ -92,8 +98,18 @@ func (q *Queue) Len() int {
 // tareas nuevas (via NewTask) como tareas recicladas desde la DLQ.
 func (q *Queue) Enqueue(task *Task) {
 	q.mu.Lock()
-	defer q.mu.Unlock()
 	q.items = append(q.items, task)
+	q.mu.Unlock()
+
+	// Avisa a quien esté esperando en DequeueWait que hay algo nuevo.
+	// select+default es clave: si ya hay una señal pendiente sin
+	// consumir (buffer lleno), no bloquea ni se apila una segunda —
+	// una sola señal alcanza para que el que espera vuelva a mirar
+	// la cola completa, no importa cuántas tareas se agregaron.
+	select {
+	case q.notify <- struct{}{}:
+	default:
+	}
 }
 
 // Dequeue retira y devuelve la tarea más antigua de la cola (FIFO).
@@ -109,6 +125,34 @@ func (q *Queue) Dequeue() (*Task, error) {
 	task := q.items[0]
 	q.items = q.items[1:]
 	return task, nil
+}
+
+// DequeueWait es la versión bloqueante de Dequeue. Si hay una tarea
+// disponible, la devuelve de inmediato. Si la cola está vacía, se
+// bloquea (sin polling, sin gastar CPU) hasta que llegue una tarea
+// nueva vía Enqueue, o hasta que ctx se cancele.
+//
+// El loop es intencional, no un descuido: tras despertar por la señal,
+// volvemos a intentar Dequeue() en vez de asumir que hay algo. Esto
+// cubre "wakeups espurios" — por ejemplo, si dos goroutines llaman
+// DequeueWait a la vez y solo una tarea llegó, la otra se despierta,
+// no encuentra nada, y vuelve a esperar. Es el mismo contrato que
+// exige sync.Cond.Wait(): nunca confiar en que despertar signifique
+// que la condición se cumple, siempre volver a chequearla.
+func (q *Queue) DequeueWait(ctx context.Context) (*Task, error) {
+	for {
+		task, err := q.Dequeue()
+		if err == nil {
+			return task, nil
+		}
+
+		select {
+		case <-q.notify:
+			// Había (o llegó) una señal: volvemos a intentar Dequeue().
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 }
 
 // BackoffDuration calcula cuánto esperar antes del siguiente reintento,
