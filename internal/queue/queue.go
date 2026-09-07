@@ -3,6 +3,7 @@ package queue
 
 import (
 	"errors"
+	"sync"
 	"time"
 	"crypto/rand"
 	"encoding/hex"
@@ -25,7 +26,12 @@ const (
 var ErrEmptyQueue = errors.New("queue: no hay tareas pendientes")
 
 // Queue es una cola FIFO en memoria de tareas pendientes de ejecutar.
+// Es segura para uso concurrente: el worker pool de Semana 2 lanza
+// varias goroutines que llaman Enqueue/Dequeue sobre la misma instancia,
+// y mu serializa el acceso a items para que dos goroutines nunca lean
+// o escriban el slice al mismo tiempo.
 type Queue struct {
+	mu    sync.Mutex
 	items []*Task
 }
 
@@ -39,7 +45,6 @@ type Task struct {
 	Attempts  int
 	LastError error
 }
-
 
 // NewQueue crea una cola vacía lista para usar.
 func NewQueue() *Queue {
@@ -73,7 +78,12 @@ func generateID() string {
 }
 
 // Len devuelve la cantidad de tareas actualmente en la cola.
+// También toma el lock: leer len(q.items) mientras otra goroutine
+// hace append o reslice es en sí mismo un acceso concurrente sin
+// proteger, aunque Len() no escriba nada.
 func (q *Queue) Len() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	return len(q.items)
 }
 
@@ -81,12 +91,17 @@ func (q *Queue) Len() int {
 // ni modifica el Task — solo lo almacena — para poder reencolar tanto
 // tareas nuevas (via NewTask) como tareas recicladas desde la DLQ.
 func (q *Queue) Enqueue(task *Task) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	q.items = append(q.items, task)
 }
 
 // Dequeue retira y devuelve la tarea más antigua de la cola (FIFO).
 // Si la cola está vacía, devuelve ErrEmptyQueue.
 func (q *Queue) Dequeue() (*Task, error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+
 	if len(q.items) == 0 {
 		return nil, ErrEmptyQueue
 	}
@@ -114,4 +129,3 @@ func BackoffDuration(attempt int) time.Duration {
 
 	return delay
 }
-
