@@ -1,7 +1,10 @@
 // internal/queue/dlq.go
 package queue
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
 // ErrTaskNotFound se devuelve cuando se busca una tarea por ID
 // y no existe en la colección consultada.
@@ -12,6 +15,7 @@ var ErrTaskNotFound = errors.New("queue: tarea no encontrada")
 // contenido y remover una tarea específica por ID — porque el caso
 // de uso es "consultar y reintentar manualmente", no "procesar en orden".
 type DeadLetterQueue struct {
+	mu    sync.Mutex
 	items map[string]*Task
 }
 
@@ -22,12 +26,16 @@ func NewDeadLetterQueue() *DeadLetterQueue {
 
 // Add mueve una tarea a la DLQ.
 func (d *DeadLetterQueue) Add(task *Task) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	d.items[task.ID] = task
 }
 
 // List devuelve todas las tareas actualmente en la DLQ.
 // El orden no está garantizado (ver nota de diseño sobre map).
 func (d *DeadLetterQueue) List() []*Task {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	tasks := make([]*Task, 0, len(d.items))
 	for _, task := range d.items {
 		tasks = append(tasks, task)
@@ -38,6 +46,8 @@ func (d *DeadLetterQueue) List() []*Task {
 // Remove retira y devuelve la tarea con el ID dado.
 // Si no existe, devuelve ErrTaskNotFound.
 func (d *DeadLetterQueue) Remove(id string) (*Task, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	task, ok := d.items[id]
 	if !ok {
 		return nil, ErrTaskNotFound

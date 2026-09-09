@@ -17,12 +17,12 @@
 
 **Meta de la semana:** que la lógica de negocio (cola, estados, reintentos, DLQ) esté completa y testeada, corriendo en memoria y de forma secuencial. Nada de HTTP, nada de goroutines todavía — eso es ruido para entender la lógica central.
 
-- [ ] Definir la interfaz `Job` (contrato mínimo: `Execute(ctx, payload) error`)
-- [ ] Definir el ciclo de vida de una tarea (pendiente → en proceso → completada / fallida → reintentando → muerta)
-- [ ] Cola en memoria (FIFO) con tests TDD: encolar, desencolar, orden, cola vacía
-- [ ] Lógica de reintentos con backoff exponencial — tests de casos límite (falla siempre, falla las primeras N veces, éxito al primer intento)
-- [ ] Dead-Letter Queue: mover tarea tras agotar reintentos, guardar payload + motivo del último error
-- [ ] Checkpoint: toda la lógica anterior corre con `go test ./...` en verde, sin ningún servidor levantado
+- [x] Definir la interfaz `Job` (contrato mínimo: `Execute(ctx, payload) error`)
+- [x] Definir el ciclo de vida de una tarea (pendiente → en proceso → completada / fallida → reintentando → muerta)
+- [x] Cola en memoria (FIFO) con tests TDD: encolar, desencolar, orden, cola vacía
+- [x] Lógica de reintentos con backoff exponencial — tests de casos límite (falla siempre, falla las primeras N veces, éxito al primer intento)
+- [x] Dead-Letter Queue: mover tarea tras agotar reintentos, guardar payload + motivo del último error
+- [x] Checkpoint: toda la lógica anterior corre con `go test ./...` en verde, sin ningún servidor levantado
 
 **Horas estimadas:** ~24-32h (encaja en 6-8 días a 3-4h/día)
 
@@ -32,9 +32,9 @@
 
 **Meta de la semana:** que múltiples workers puedan tomar tareas de la cola sin pisarse, y que todo sea accesible por HTTP.
 
-- [ ] Worker pool con goroutines y channels
-- [ ] Tests de condiciones de carrera con `go test -race`
-- [ ] Definir cuántos workers corren en paralelo (configurable) y qué pasa si todos están ocupados
+- [x] Worker pool con goroutines y channels
+- [x] Tests de condiciones de carrera con `go test -race`
+- [x] Definir cuántos workers corren en paralelo (configurable) y qué pasa si todos están ocupados
 - [ ] Endpoints REST: `POST /jobs` (encolar), `GET /jobs/:id` (estado), `GET /dlq` (listar muertas), `POST /dlq/:id/retry` (reencolar manual)
 - [ ] Tests de integración de los endpoints (no solo unitarios)
 - [ ] Checkpoint: se puede levantar el servidor y encolar/consultar tareas con `curl`
