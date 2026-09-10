@@ -13,6 +13,7 @@ type WorkerPool struct {
 	inbox      *Queue
 	tasks      chan *Task
 	dlq        *DeadLetterQueue
+	registry   *TaskRegistry  
 	numWorkers int
 }
 
@@ -30,6 +31,7 @@ func NewWorkerPool(numWorkers int, channelCapacity int, dlq *DeadLetterQueue) *W
 		inbox:      NewQueue(),
 		tasks:      make(chan *Task, channelCapacity),
 		dlq:        dlq,
+		registry:   NewTaskRegistry(),   
 		numWorkers: numWorkers,
 	}
 }
@@ -39,6 +41,7 @@ func NewWorkerPool(numWorkers int, channelCapacity int, dlq *DeadLetterQueue) *W
 // simplemente se suma al inbox ilimitado, y el dispatcher será quien
 // la mueva al channel bounded cuando haya lugar.
 func (wp *WorkerPool) Submit(task *Task) {
+	wp.registry.Add(task)   
 	wp.inbox.Enqueue(task)
 }
 
@@ -122,4 +125,11 @@ func (wp *WorkerPool) scheduleRetry(ctx context.Context, task *Task, delay time.
 		case <-ctx.Done():
 		}
 	}()
+}
+
+// Lookup busca una tarea por ID, sin importar si está pendiente,
+// procesándose, reintentando, completada o muerta. Es lo que va a
+// usar el handler de GET /jobs/:id.
+func (wp *WorkerPool) Lookup(id string) (*Task, error) {   // NUEVO
+	return wp.registry.Get(id)
 }

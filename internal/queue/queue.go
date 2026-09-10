@@ -40,14 +40,31 @@ type Queue struct {
 // Task envuelve un Job con su metadata de ejecución: estado actual,
 // cantidad de intentos realizados, y el motivo del último error
 // (relevante una vez que la tarea entra en reintentos o muere en la DLQ).
+//
+// mu protege Status, Attempts y LastError: ProcessTask los escribe
+// desde la goroutine de un worker, y cualquier lector externo (por
+// ejemplo, el handler HTTP de GET /jobs/:id) puede leerlos al mismo
+// tiempo desde otra goroutine. Usar Snapshot() en vez de leer los
+// campos directamente es lo que evita esa data race.
 type Task struct {
 	ID        string
 	Job       Job
 	Status    Status
 	Attempts  int
 	LastError error
+	mu        sync.Mutex
 }
 
+// TaskSnapshot es una copia inmutable y segura de leer del estado de
+// una Task en un instante dado. LastError se convierte a string
+// porque error no serializa a JSON de forma útil, y el snapshot está
+// pensado justamente para exponerse por HTTP.
+type TaskSnapshot struct {
+	ID        string `json:"id"`
+	Status    Status `json:"status"`
+	Attempts  int    `json:"attempts"`
+	LastError string `json:"last_error,omitempty"`
+}
 
 // NewQueue crea una cola vacía lista para usar.
 func NewQueue() *Queue {
@@ -172,4 +189,38 @@ func BackoffDuration(attempt int) time.Duration {
 	}
 
 	return delay
+}
+
+// Snapshot devuelve el estado actual de la tarea de forma segura para
+// llamar desde cualquier goroutine, incluso mientras un worker la está
+// procesando en simultáneo.
+func (t *Task) Snapshot() TaskSnapshot {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	lastErr := ""
+	if t.LastError != nil {
+		lastErr = t.LastError.Error()
+	}
+
+	return TaskSnapshot{
+		ID:        t.ID,
+		Status:    t.Status,
+		Attempts:  t.Attempts,
+		LastError: lastErr,
+	}
+}
+
+// ResetForRetry reinicia el estado de la tarea para un reintento
+// manual desde la DLQ: vuelve a Pending, resetea Attempts a 0 y
+// limpia LastError. Sin esto, reencolar una tarea que ya estaba en
+// MaxAttempts la mandaría de vuelta a la DLQ apenas fallara una vez
+// más — un reintento manual debería darle un ciclo fresco completo
+// de intentos, no uno solo.
+func (t *Task) ResetForRetry() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.Status = StatusPending
+	t.Attempts = 0
+	t.LastError = nil
 }
