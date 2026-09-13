@@ -4,6 +4,8 @@ package queue
 import (
 	"context"
 	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"os"
 )
 
@@ -24,6 +26,11 @@ func (j ImageResizeJob) Execute(ctx context.Context) error {
 		return err
 	}
 	defer file.Close()
+
+	_, _, err = image.Decode(file)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
