@@ -3,17 +3,21 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"image"
-	_ "image/jpeg"
-	_ "image/png"
+	"image/jpeg"
+	"image/png"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 // ImageResizeJob es un job real (a diferencia de EmailJob, que es
 // simulado): abre un archivo de imagen en disco, lo redimensiona con
 // nearest neighbor, y guarda el resultado. SourcePath apunta al
 // archivo de origen; el archivo de salida se deriva automáticamente
-// de ese path (convención, no un campo nuevo).
+// de ese path (convención, no un campo nuevo): "foto.jpg" produce
+// "foto_resized.jpg", sobrescribiendo si ya existía.
 type ImageResizeJob struct {
 	SourcePath string `json:"source_path"`
 	Width      int    `json:"width"`
@@ -27,12 +31,39 @@ func (j ImageResizeJob) Execute(ctx context.Context) error {
 	}
 	defer file.Close()
 
-	_, _, err = image.Decode(file)
+	src, format, err := image.Decode(file)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	resized := resizeNearestNeighbor(src, j.Width, j.Height)
+
+	outputPath := derivedOutputPath(j.SourcePath)
+	out, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	switch format {
+	case "jpeg":
+		return jpeg.Encode(out, resized, nil)
+	case "png":
+		return png.Encode(out, resized)
+	default:
+		return fmt.Errorf("queue: formato de imagen no soportado para guardar: %s", format)
+	}
+}
+
+// derivedOutputPath calcula el path de salida por convención,
+// insertando "_resized" antes de la extensión: "/tmp/foto.jpg" pasa
+// a "/tmp/foto_resized.jpg". Si ya existe un archivo con ese nombre,
+// Execute lo sobrescribe sin preguntar (limitación conocida, anotada
+// en el README).
+func derivedOutputPath(sourcePath string) string {
+	ext := filepath.Ext(sourcePath)
+	base := strings.TrimSuffix(sourcePath, ext)
+	return base + "_resized" + ext
 }
 
 // resizeNearestNeighbor redimensiona src a dstWidth x dstHeight usando
