@@ -1,6 +1,32 @@
+// internal/queue/image_resize.go
 package queue
 
-import "image"
+import (
+	"context"
+	"image"
+	"os"
+)
+
+// ImageResizeJob es un job real (a diferencia de EmailJob, que es
+// simulado): abre un archivo de imagen en disco, lo redimensiona con
+// nearest neighbor, y guarda el resultado. SourcePath apunta al
+// archivo de origen; el archivo de salida se deriva automáticamente
+// de ese path (convención, no un campo nuevo).
+type ImageResizeJob struct {
+	SourcePath string `json:"source_path"`
+	Width      int    `json:"width"`
+	Height     int    `json:"height"`
+}
+
+func (j ImageResizeJob) Execute(ctx context.Context) error {
+	file, err := os.Open(j.SourcePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return nil
+}
 
 // resizeNearestNeighbor redimensiona src a dstWidth x dstHeight usando
 // el algoritmo nearest neighbor: para cada píxel de la imagen de
