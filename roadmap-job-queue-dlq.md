@@ -35,9 +35,9 @@
 - [x] Worker pool con goroutines y channels
 - [x] Tests de condiciones de carrera con `go test -race`
 - [x] Definir cuántos workers corren en paralelo (configurable) y qué pasa si todos están ocupados
-- [ ] Endpoints REST: `POST /jobs` (encolar), `GET /jobs/:id` (estado), `GET /dlq` (listar muertas), `POST /dlq/:id/retry` (reencolar manual)
-- [ ] Tests de integración de los endpoints (no solo unitarios)
-- [ ] Checkpoint: se puede levantar el servidor y encolar/consultar tareas con `curl`
+- [x] Endpoints REST: `POST /jobs` (encolar), `GET /jobs/:id` (estado), `GET /dlq` (listar muertas), `POST /dlq/:id/retry` (reencolar manual)
+- [x] Tests de integración de los endpoints (no solo unitarios)
+- [x] Checkpoint: se puede levantar el servidor y encolar/consultar tareas con `curl`
 
 **Horas estimadas:** ~24-30h
 
