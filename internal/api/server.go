@@ -31,5 +31,6 @@ func (s *Server) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /jobs/{id}", s.handleGetJob)
 	mux.HandleFunc("GET /dlq", s.handleListDLQ)
 	mux.HandleFunc("POST /dlq/{id}/retry", s.handleRetryDLQ)
+	mux.HandleFunc("GET /dashboard", s.handleDashboard)
 	return mux
 }
