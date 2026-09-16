@@ -6,8 +6,6 @@ import (
 	"sync"
 )
 
-// ErrUnknownJobType se devuelve cuando se pide construir un Job de un
-// tipo que nadie registró.
 var ErrUnknownJobType = errors.New("queue: tipo de job desconocido")
 
 // JobFactory construye un Job concreto a partir de su payload JSON.
@@ -19,23 +17,15 @@ type JobFactory func(payload json.RawMessage) (Job, error)
 // ya es Strategy (cualquier struct que implemente Execute sirve), y
 // JobRegistry mapea un string (el "type" que llega en el JSON de
 // POST /jobs) a la factory que sabe construir ese Job concreto.
-//
-// Deliberadamente no conoce EmailJob ni ningún tipo concreto — eso se
-// registra afuera, en la composición final (cmd/server/main.go).
-// Agregar un tipo de Job nuevo el día de mañana significa escribir el
-// struct + una llamada a Register; nada en este archivo, ni en los
-// handlers HTTP, cambia.
 type JobRegistry struct {
 	mu        sync.Mutex
 	factories map[string]JobFactory
 }
 
-// NewJobRegistry crea un registro vacío listo para usar.
 func NewJobRegistry() *JobRegistry {
 	return &JobRegistry{factories: make(map[string]JobFactory)}
 }
 
-// Register asocia un tipo (string) con la factory que sabe construirlo.
 func (r *JobRegistry) Register(jobType string, factory JobFactory) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

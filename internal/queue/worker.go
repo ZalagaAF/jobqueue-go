@@ -20,12 +20,7 @@ type WorkerPool struct {
 // NewWorkerPool crea un pool listo para recibir trabajo con Submit,
 // pero todavía sin ninguna goroutine corriendo — separar "construir"
 // de "arrancar" permite testear el struct sin efectos secundarios
-// concurrentes, y deja a quien lo usa decidir cuándo empieza el trabajo
-// real (por ejemplo, recién al levantar el servidor HTTP).
-//
-// numWorkers y channelCapacity son parámetros de infraestructura
-// (no constantes de dominio como MaxAttempts): dependen del hardware
-// donde corre el proceso, no de una regla de negocio fija.
+// concurrentes, y deja a quien lo usa decidir cuándo empieza el trabajo real
 func NewWorkerPool(numWorkers int, channelCapacity int, dlq *DeadLetterQueue) *WorkerPool {
 	return &WorkerPool{
 		inbox:      NewQueue(),
@@ -46,17 +41,13 @@ func (wp *WorkerPool) Submit(task *Task) {
 }
 
 // Pending devuelve cuántas tareas están esperando en el inbox,
-// todavía sin haber sido tomadas por el dispatcher. Útil tanto para
-// tests como, más adelante, para exponer profundidad de cola en un
-// endpoint de métricas o el dashboard.
+// todavía sin haber sido tomadas por el dispatcher. 
 func (wp *WorkerPool) Pending() int {
 	return wp.inbox.Len()
 }
 
 // Start pone en marcha el pool: lanza el dispatcher como una goroutine
-// separada y retorna de inmediato (no bloquea al llamador). Los N
-// workers que consumen wp.tasks se suman en el próximo ciclo.
-//
+// separada y retorna de inmediato 
 // ctx controla el apagado: cuando se cancela, el dispatcher deja de
 // mover tareas del inbox al channel y su goroutine termina.
 func (wp *WorkerPool) Start(ctx context.Context) {
@@ -86,11 +77,6 @@ func (wp *WorkerPool) dispatch(ctx context.Context) {
 	}
 }
 
-// runWorker es el loop de un worker individual: espera tareas del
-// channel bounded (sin polling, gracias a que <-wp.tasks bloquea) y
-// las procesa con ProcessTask, la misma función de Semana 1 sin
-// cambios. Si la tarea queda en Retrying, delega el resto del ciclo
-// de reintento a scheduleRetry.
 func (wp *WorkerPool) runWorker(ctx context.Context) {
 	for {
 		select {
@@ -127,9 +113,6 @@ func (wp *WorkerPool) scheduleRetry(ctx context.Context, task *Task, delay time.
 	}()
 }
 
-// Lookup busca una tarea por ID, sin importar si está pendiente,
-// procesándose, reintentando, completada o muerta. Es lo que va a
-// usar el handler de GET /jobs/:id.
 func (wp *WorkerPool) Lookup(id string) (*Task, error) {   // NUEVO
 	return wp.registry.Get(id)
 }

@@ -58,8 +58,7 @@ func (j ImageResizeJob) Execute(ctx context.Context) error {
 // derivedOutputPath calcula el path de salida por convención,
 // insertando "_resized" antes de la extensión: "/tmp/foto.jpg" pasa
 // a "/tmp/foto_resized.jpg". Si ya existe un archivo con ese nombre,
-// Execute lo sobrescribe sin preguntar (limitación conocida, anotada
-// en el README).
+// Execute lo sobrescribe sin preguntar 
 func derivedOutputPath(sourcePath string) string {
 	ext := filepath.Ext(sourcePath)
 	base := strings.TrimSuffix(sourcePath, ext)
@@ -69,9 +68,7 @@ func derivedOutputPath(sourcePath string) string {
 // resizeNearestNeighbor redimensiona src a dstWidth x dstHeight usando
 // el algoritmo nearest neighbor: para cada píxel de la imagen de
 // salida, copia el color del píxel de la imagen original que le
-// queda más cerca según un escalado lineal de coordenadas. No
-// interpola ni promedia — es el algoritmo de resize más simple que
-// existe, a costa de bordes "pixelados" en escalados grandes.
+// queda más cerca según un escalado lineal de coordenadas.
 func resizeNearestNeighbor(src image.Image, dstWidth, dstHeight int) image.Image {
 	srcBounds := src.Bounds()
 	srcWidth := srcBounds.Dx()

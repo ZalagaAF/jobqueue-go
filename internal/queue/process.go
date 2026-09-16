@@ -1,4 +1,3 @@
-// internal/queue/process.go
 package queue
 
 import "context"
@@ -10,13 +9,6 @@ const MaxAttempts = 5
 // — eso es responsabilidad de la capa que orquesta el tiempo real (el
 // worker). ProcessTask solo decide y refleja el resultado de UN
 // intento en el estado de la Task.
-//
-// Las escrituras a los campos de task van protegidas por task.mu, pero
-// el lock NUNCA se sostiene mientras corre task.Job.Execute(ctx) — ese
-// código es del usuario y puede tardar lo que sea; sostener el lock
-// ahí bloquearía a cualquiera que quiera leer el estado (Snapshot)
-// mientras la tarea está simplemente corriendo, que es exactamente
-// cuando más sentido tiene poder consultarlo.
 func ProcessTask(ctx context.Context, task *Task, dlq *DeadLetterQueue) {
 	task.mu.Lock()
 	task.Status = StatusProcessing

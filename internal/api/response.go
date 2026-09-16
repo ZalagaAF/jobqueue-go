@@ -5,8 +5,7 @@ import (
 	"net/http"
 )
 
-// errorResponse es el formato uniforme para cualquier error que
-// devuelva la API: {"error": "..."}.
+
 type errorResponse struct {
 	Error string `json:"error"`
 }

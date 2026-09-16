@@ -1,11 +1,139 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>jobqueue-go — Dashboard</title>
+<meta charset="UTF-8">
+<title>jobqueue-go — Dashboard</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background-color: #00bbfa; }
+  h1 { font-size: 3.0rem; color: #ffc54a; text-align: center; }
+  h2 { font-size: 1.1rem; margin-top: 2rem; }
+  button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
+  #simulate-btn { display: block; margin: 1rem auto; }
+  .cards { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+  .card { border: 1px solid #ccc; border-radius: 8px; padding: 0.75rem 1rem; min-width: 160px; background-color: rgba(128, 128, 128, 0.25); }
+  .card .type { font-weight: bold; }
+  .card .id { font-size: 0.75rem; color: #666; word-break: break-all; }
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.85rem; margin-top: 0.4rem; }
+  .badge-pending, .badge-processing { background: #fef3c7; color: #92400e; }
+  .badge-retrying { background: #fed7aa; color: #9a3412; }
+  .badge-completed { background: #d1fae5; color: #065f46; }
+  .badge-dead { background: #fee2e2; color: #991b1b; }
+  #dlq-list { list-style: none; padding: 0; }
+  #dlq-list li { border: 1px solid #fca5a5; background: #fef2f2; border-radius: 6px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }
+  #dlq-list button { padding: 0.3rem 0.7rem; font-size: 0.85rem; }
+  #dlq-empty { color: #666; font-size: 0.9rem; }
+</style>
 </head>
 <body>
-    <h1>jobqueue-go dashboard</h1>
-    <p>En construcción.</p>
+
+<h1>jobqueue-go — dashboard</h1>
+<p>Dispara 4 tareas concurrentes (3 emails + 1 redimensión que va a fallar) y mirá cómo el worker pool las procesa en paralelo.</p>
+<button id="simulate-btn">Simular 4 tareas</button>
+
+<div class="cards" id="cards"></div>
+
+<h2>Dead-Letter Queue</h2>
+<p id="dlq-empty">Sin tareas muertas por ahora.</p>
+<ul id="dlq-list"></ul>
+
+<script>
+const cardsEl = document.getElementById('cards');
+const dlqListEl = document.getElementById('dlq-list');
+const dlqEmptyEl = document.getElementById('dlq-empty');
+
+function badgeClass(status) {
+  return 'badge badge-' + status;
+}
+
+function renderCard(id, type) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'card-' + id;
+  card.innerHTML = `
+    <div class="type">${type}</div>
+    <div class="id">${id}</div>
+    <span class="${badgeClass('pending')}">pending</span>
+  `;
+  cardsEl.appendChild(card);
+}
+
+function updateCard(id, snapshot) {
+  const card = document.getElementById('card-' + id);
+  if (!card) return;
+  const badge = card.querySelector('.badge');
+  badge.textContent = snapshot.status;
+  badge.className = badgeClass(snapshot.status);
+}
+
+function pollTask(id) {
+  const interval = setInterval(async () => {
+    const res = await fetch('/jobs/' + id);
+    if (!res.ok) return;
+    const snapshot = await res.json();
+    updateCard(id, snapshot);
+    if (snapshot.status === 'completed' || snapshot.status === 'dead') {
+      clearInterval(interval);
+    }
+  }, 1000);
+}
+
+async function submitJob(type, payload) {
+  const res = await fetch('/jobs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, payload }),
+  });
+  const body = await res.json();
+  return body.id;
+}
+
+document.getElementById('simulate-btn').addEventListener('click', async () => {
+  cardsEl.innerHTML = '';
+
+  const jobs = [
+    { type: 'email', payload: { to: 'a@example.com', subject: 'Demo 1' } },
+    { type: 'email', payload: { to: 'b@example.com', subject: 'Demo 2' } },
+    { type: 'email', payload: { to: 'c@example.com', subject: 'Demo 3' } },
+    { type: 'image_resize', payload: { source_path: '/tmp/no-existe-dashboard-demo.jpg', width: 100, height: 100 } },
+  ];
+
+  // Promise.all dispara los 4 POST en paralelo, no uno tras otro —
+  // es la parte del demo que muestra que Submit() nunca bloquea al
+  // llamador, sin importar cuántas tareas entren a la vez.
+  const ids = await Promise.all(jobs.map(j => submitJob(j.type, j.payload)));
+
+  ids.forEach((id, i) => {
+    renderCard(id, jobs[i].type);
+    pollTask(id);
+  });
+});
+
+async function refreshDLQ() {
+  const res = await fetch('/dlq');
+  if (!res.ok) return;
+  const tasks = await res.json();
+
+  dlqListEl.innerHTML = '';
+  dlqEmptyEl.style.display = tasks.length === 0 ? 'block' : 'none';
+
+  tasks.forEach(task => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span>${task.id} — ${task.attempts} intentos — ${task.last_error || ''}</span>
+      <button data-id="${task.id}">Reintentar</button>
+    `;
+    li.querySelector('button').addEventListener('click', async (e) => {
+      const id = e.target.dataset.id;
+      await fetch('/dlq/' + id + '/retry', { method: 'POST' });
+      refreshDLQ();
+    });
+    dlqListEl.appendChild(li);
+  });
+}
+
+setInterval(refreshDLQ, 2000);
+refreshDLQ();
+</script>
+
 </body>
 </html>

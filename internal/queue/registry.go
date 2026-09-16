@@ -13,22 +13,18 @@ type TaskRegistry struct {
 	items map[string]*Task
 }
 
-// NewTaskRegistry crea un registro vacío listo para usar.
 func NewTaskRegistry() *TaskRegistry {
 	return &TaskRegistry{items: make(map[string]*Task)}
 }
 
-// Add indexa una tarea por su ID. Se llama una sola vez, al momento
-// de Submit — el registro nunca la borra después, ni siquiera cuando
-// llega a un estado terminal.
+// Add indexa una tarea por su ID. 
 func (r *TaskRegistry) Add(task *Task) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.items[task.ID] = task
 }
 
-// Get busca una tarea por ID. Devuelve ErrTaskNotFound (el mismo
-// sentinel error de DeadLetterQueue.Remove) si no existe.
+// Get busca una tarea por ID. 
 func (r *TaskRegistry) Get(id string) (*Task, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

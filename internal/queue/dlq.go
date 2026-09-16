@@ -6,25 +6,19 @@ import (
 	"sync"
 )
 
-// ErrTaskNotFound se devuelve cuando se busca una tarea por ID
-// y no existe en la colección consultada.
+
 var ErrTaskNotFound = errors.New("queue: tarea no encontrada")
 
 // DeadLetterQueue almacena tareas que agotaron sus reintentos.
-// A diferencia de Queue (FIFO estricta), permite listar todo su
-// contenido y remover una tarea específica por ID — porque el caso
-// de uso es "consultar y reintentar manualmente", no "procesar en orden".
 type DeadLetterQueue struct {
 	mu    sync.Mutex
 	items map[string]*Task
 }
 
-// NewDeadLetterQueue crea una DLQ vacía lista para usar.
 func NewDeadLetterQueue() *DeadLetterQueue {
 	return &DeadLetterQueue{items: make(map[string]*Task)}
 }
 
-// Add mueve una tarea a la DLQ.
 func (d *DeadLetterQueue) Add(task *Task) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -32,7 +26,7 @@ func (d *DeadLetterQueue) Add(task *Task) {
 }
 
 // List devuelve todas las tareas actualmente en la DLQ.
-// El orden no está garantizado (ver nota de diseño sobre map).
+// El orden no está garantizado.
 func (d *DeadLetterQueue) List() []*Task {
 	d.mu.Lock()
 	defer d.mu.Unlock()

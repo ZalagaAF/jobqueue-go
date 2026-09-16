@@ -8,17 +8,10 @@ import (
 	"github.com/ZalagaAF/jobqueue-go/internal/queue"
 )
 
-// TestQueue_ConcurrentEnqueueAndDequeue_NoDataRace simula lo que hará el
-// worker pool de Semana 2: varias goroutines (workers) llamando Dequeue()
-// sobre la MISMA Queue al mismo tiempo, mientras otras goroutines siguen
-// encolando tareas nuevas (productores).
-//
 // La propiedad que nos importa: cada tarea encolada debe ser entregada
 // exactamente UNA vez a algún consumer. Si dos consumers reciben la
 // misma tarea (o alguna se pierde), la cola no es segura para uso
 // concurrente.
-//
-// Correr con: go test -race ./internal/queue/...
 func TestQueue_ConcurrentEnqueueAndDequeue_NoDataRace(t *testing.T) {
 	q := queue.NewQueue()
 
