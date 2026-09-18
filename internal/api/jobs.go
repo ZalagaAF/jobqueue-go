@@ -1,4 +1,3 @@
-// internal/api/jobs.go
 package api
 
 import (
@@ -8,11 +7,6 @@ import (
 	"github.com/ZalagaAF/jobqueue-go/internal/queue"
 )
 
-// createJobRequest es el contrato de entrada de POST /jobs: type le
-// dice al JobRegistry qué factory usar, payload es el JSON crudo que
-// esa factory va a deserializar al struct concreto (EmailJob, etc.).
-// json.RawMessage pospone el parseo del payload hasta que sabemos con
-// qué tipo concreto construirlo.
 type createJobRequest struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
@@ -41,10 +35,6 @@ func (s *Server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, createJobResponse{ID: task.ID})
 }
 
-// handleGetJob resuelve GET /jobs/{id}. Usa Lookup para encontrar la
-// tarea sin importar su estado, y Snapshot() (nunca los campos de
-// Task directo) porque un worker podría estar escribiéndola en este
-// mismo instante desde otra goroutine.
 func (s *Server) handleGetJob(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 

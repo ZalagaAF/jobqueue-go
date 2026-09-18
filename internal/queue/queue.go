@@ -1,4 +1,3 @@
-// internal/queue/queue.go
 package queue
 
 import (
@@ -30,9 +29,6 @@ type Queue struct {
 	notify chan struct{}
 }
 
-// Task envuelve un Job con su metadata de ejecución: estado actual,
-// cantidad de intentos realizados, y el motivo del último error
-// (relevante una vez que la tarea entra en reintentos o muere en la DLQ).
 type Task struct {
 	ID        string
 	Job       Job
@@ -108,17 +104,6 @@ func (q *Queue) Dequeue() (*Task, error) {
 	return task, nil
 }
 
-// DequeueWait es la versión bloqueante de Dequeue. Si hay una tarea
-// disponible, la devuelve de inmediato. Si la cola está vacía, se
-// bloquea (sin polling, sin gastar CPU) hasta que llegue una tarea
-// nueva vía Enqueue, o hasta que ctx se cancele.
-// El loop es intencional, no un descuido: tras despertar por la señal,
-// volvemos a intentar Dequeue() en vez de asumir que hay algo. Esto
-// cubre "wakeups espurios" — por ejemplo, si dos goroutines llaman
-// DequeueWait a la vez y solo una tarea llegó, la otra se despierta,
-// no encuentra nada, y vuelve a esperar. Es el mismo contrato que
-// exige sync.Cond.Wait(): nunca confiar en que despertar signifique
-// que la condición se cumple, siempre volver a chequearla.
 func (q *Queue) DequeueWait(ctx context.Context) (*Task, error) {
 	for {
 		task, err := q.Dequeue()
@@ -168,9 +153,6 @@ func (t *Task) Snapshot() TaskSnapshot {
 	}
 }
 
-// ResetForRetry reinicia el estado de la tarea para un reintento
-// manual desde la DLQ: vuelve a Pending, resetea Attempts a 0 y
-// limpia LastError. 
 func (t *Task) ResetForRetry() {
 	t.mu.Lock()
 	defer t.mu.Unlock()

@@ -1,4 +1,3 @@
-// internal/queue/worker_internal_test.go
 package queue
 
 import (
@@ -82,12 +81,6 @@ func TestWorkerPool_Worker_ExecutesSubmittedTask(t *testing.T) {
 	}
 }
 
-// signalJob avisa por un channel apenas se ejecuta. Se usa en vez de
-// leer task.Status después de procesar: leer un campo de Task desde
-// el goroutine del test mientras el worker todavía podría estar
-// escribiéndolo sería, otra vez, una data race — el mismo problema
-// que ya resolvimos en Queue y DeadLetterQueue, pero ahora sobre Task.
-// close(done) da una señal segura y libre de esa race.
 type signalJob struct {
 	done chan struct{}
 }

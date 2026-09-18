@@ -1,4 +1,3 @@
-// internal/queue/process_test.go
 package queue_test
 
 import (

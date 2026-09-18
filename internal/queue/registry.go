@@ -2,12 +2,6 @@ package queue
 
 import "sync"
 
-// TaskRegistry indexa TODAS las tareas alguna vez enviadas al pool,
-// por ID, sin importar su estado actual (pending, retrying, completed,
-// dead...). A diferencia de Queue (que solo tiene las que esperan) o
-// DeadLetterQueue (solo las muertas), este es el único lugar que
-// permite encontrar una tarea sin importar en qué punto de su ciclo
-// de vida esté — lo que necesita GET /jobs/:id.
 type TaskRegistry struct {
 	mu    sync.Mutex
 	items map[string]*Task

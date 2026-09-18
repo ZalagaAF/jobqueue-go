@@ -21,7 +21,7 @@ func main() {
 	channelCapacity := flag.Int("channel-capacity", 16, "capacidad del channel bounded entre el dispatcher y los workers")
 	flag.Parse()
 
-	// ctx se cancela solo cuando llega SIGINT (Ctrl+C) o SIGTERM 
+	// ctx se cancela solo cuando llega SIGINT o SIGTERM 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

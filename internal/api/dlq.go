@@ -1,4 +1,3 @@
-// internal/api/dlq.go
 package api
 
 import (

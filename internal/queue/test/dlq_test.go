@@ -1,4 +1,3 @@
-// internal/queue/dlq_test.go
 package queue_test
 
 import (

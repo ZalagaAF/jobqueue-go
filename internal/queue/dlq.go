@@ -1,4 +1,3 @@
-// internal/queue/dlq.go
 package queue
 
 import (
@@ -25,8 +24,6 @@ func (d *DeadLetterQueue) Add(task *Task) {
 	d.items[task.ID] = task
 }
 
-// List devuelve todas las tareas actualmente en la DLQ.
-// El orden no está garantizado.
 func (d *DeadLetterQueue) List() []*Task {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -37,8 +34,6 @@ func (d *DeadLetterQueue) List() []*Task {
 	return tasks
 }
 
-// Remove retira y devuelve la tarea con el ID dado.
-// Si no existe, devuelve ErrTaskNotFound.
 func (d *DeadLetterQueue) Remove(id string) (*Task, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()

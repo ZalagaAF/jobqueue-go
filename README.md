@@ -2,9 +2,9 @@ cat > README.md << 'EOF'
 # jobqueue-go
 
 Cola de trabajos en memoria con Dead-Letter Queue (DLQ), escrita en Go
-puro sin dependencias externas como proyecto de portafolio backend,
-construido con TDD estricto (rojo-verde-refactor) de punta a punta.
-El fin de este proyecto era el aprendizaje e implementación de técnicas de diseño estudiadas. 
+puro sin dependencias externas como proyecto backend.
+Este proyecto fue hecho con fines de aprendizaje y para profundizar en técnicas 
+de diseño aprendidas, como TDD y patrones de diseño.
 
 ## Qué hace
 
@@ -108,12 +108,10 @@ Cada ciclo de desarrollo se hizo con `-race` activado sin excepciones.
 - **Resize con nearest neighbor**: prioriza simplicidad y
   testeabilidad sobre calidad visual. En escalados grandes (por
   ejemplo, una imagen 4K reducida a 200x200) el resultado se ve
-  notoriamente pixelado. Un algoritmo bilinear daría mejor calidad a
-  costa de más complejidad.
+  notoriamente pixelado. Un algoritmo bilinear daría mejor calidad.
 - **Sin jitter en el backoff**: todos los workers reintentando el
   mismo tipo de fallo en simultáneo esperan exactamente el mismo
-  delay, lo que puede generar picos de carga sincronizados
-  ("thundering herd") en un escenario con volumen alto.
+  delay.
 - **DLQ sin orden garantizado**: `DeadLetterQueue.List()` itera un
   `map`, así que el orden de la lista no es determinístico ni refleja
   cuándo murió cada tarea.

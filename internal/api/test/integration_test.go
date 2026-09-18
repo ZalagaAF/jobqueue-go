@@ -24,7 +24,7 @@ func (alwaysFailJob) Execute(ctx context.Context) error {
 	return errors.New("fallo simulado para el test de integracion")
 }
 
-// newIntegrationServer arma un Server con workers REALES corriendo
+// newIntegrationServer arma un Server con workers reales corriendo
 // (wp.Start(ctx)) — a diferencia de newTestServer() en los tests
 // unitarios de cada handler, donde nadie llama Start y las tareas se
 // quedan quietas en Pending a propósito.
@@ -69,11 +69,6 @@ func getJSON(t *testing.T, srv *api.Server, path string) *httptest.ResponseRecor
 	return rec
 }
 
-// waitForStatus hace polling sobre GET /jobs/{id} hasta ver el status
-// esperado o vencer el timeout. Es un patrón normal en tests de
-// integración con concurrencia real: no sabemos en qué milisegundo
-// exacto terminará un worker, así que consultamos hasta que pase o
-// se acabe el margen.
 func waitForStatus(t *testing.T, srv *api.Server, id string, want queue.Status, timeout time.Duration) queue.TaskSnapshot {
 	t.Helper()
 

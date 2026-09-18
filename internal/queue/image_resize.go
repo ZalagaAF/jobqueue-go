@@ -1,4 +1,3 @@
-// internal/queue/image_resize.go
 package queue
 
 import (
@@ -12,12 +11,6 @@ import (
 	"strings"
 )
 
-// ImageResizeJob es un job real (a diferencia de EmailJob, que es
-// simulado): abre un archivo de imagen en disco, lo redimensiona con
-// nearest neighbor, y guarda el resultado. SourcePath apunta al
-// archivo de origen; el archivo de salida se deriva automáticamente
-// de ese path (convención, no un campo nuevo): "foto.jpg" produce
-// "foto_resized.jpg", sobrescribiendo si ya existía.
 type ImageResizeJob struct {
 	SourcePath string `json:"source_path"`
 	Width      int    `json:"width"`
