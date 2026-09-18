@@ -1,4 +1,3 @@
-cat > README.md << 'EOF'
 # jobqueue-go
 
 Cola de trabajos en memoria con Dead-Letter Queue (DLQ), escrita en Go
@@ -127,5 +126,3 @@ Cada ciclo de desarrollo se hizo con `-race` activado sin excepciones.
 - Ordenar la DLQ por un campo `DeadAt time.Time`
 - Ring buffer o lista enlazada para el inbox si el slicing se vuelve
   cuello de botella con volumen alto
-
-## Estructura del repo
